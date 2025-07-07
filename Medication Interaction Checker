@@ -1,0 +1,75 @@
+import difflib
+
+class DrugDatabase:
+    def __init__(self):
+        self.drugs = {
+            "aspirin": {"interactions": {"warfarin": "high", "ibuprofen": "moderate"}},
+            "warfarin": {"interactions": {"aspirin": "high", "amoxicillin": "moderate"}},
+            "ibuprofen": {"interactions": {"aspirin": "moderate"}},
+            "amoxicillin": {"interactions": {"warfarin": "moderate"}},
+            "metformin": {"interactions": {"alcohol": "high"}},
+            "alcohol": {"interactions": {"metformin": "high"}},
+        }
+
+    def find_closest_match(self, name):
+        candidates = list(self.drugs.keys())
+        match = difflib.get_close_matches(name.lower(), candidates, n=1)
+        return match[0] if match else None
+
+    def get_interactions(self, drug):
+        return self.drugs.get(drug, {}).get("interactions", {})
+
+
+class InteractionEngine:
+    def __init__(self, db):
+        self.db = db
+
+    def check_interactions(self, medications):
+        standardized = [self.db.find_closest_match(med) for med in medications]
+        interactions = []
+        for i in range(len(standardized)):
+            for j in range(i + 1, len(standardized)):
+                d1 = standardized[i]
+                d2 = standardized[j]
+                if d1 and d2:
+                    severity = self.db.get_interactions(d1).get(d2)
+                    if severity:
+                        interactions.append((d1, d2, severity))
+        return interactions
+
+
+class SeverityAssessor:
+    def sort_by_severity(self, interactions):
+        priority = {"high": 1, "moderate": 2, "low": 3}
+        return sorted(interactions, key=lambda x: priority.get(x[2], 4))
+
+
+class AlertSystem:
+    def generate_alerts(self, interactions):
+        alerts = []
+        for d1, d2, severity in interactions:
+            message = f"{d1.title()} and {d2.title()} interaction: {severity.upper()} risk"
+            alerts.append(message)
+        return alerts
+
+
+class MedicationInteractionChecker:
+    def __init__(self):
+        self.db = DrugDatabase()
+        self.engine = InteractionEngine(self.db)
+        self.assessor = SeverityAssessor()
+        self.alert_system = AlertSystem()
+
+    def run(self, medication_list):
+        interactions = self.engine.check_interactions(medication_list)
+        prioritized = self.assessor.sort_by_severity(interactions)
+        return self.alert_system.generate_alerts(prioritized)
+
+
+checker = MedicationInteractionChecker()
+
+patient_meds = ["Aspirin", "Warfarin", "Metformin", "Alcohol"]
+alerts = checker.run(patient_meds)
+
+for alert in alerts:
+    print(alert)
